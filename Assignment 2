@@ -1,0 +1,66 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+np.random.seed(42)
+num_samples = 200
+
+
+speed = np.random.normal(60, 20, num_samples).clip(20, 120)
+road_condition = np.random.randint(1, 5, num_samples)
+
+
+true_coefficients = np.array([0.08, 0.9])  # Speed, Road condition
+severity = 0.5 + true_coefficients[0] * speed + true_coefficients[1] * road_condition
+severity += np.random.normal(0, 1, num_samples)  # Add noise
+severity = severity.clip(0, 10)
+
+
+X = np.column_stack((np.ones(num_samples), speed, road_condition))
+
+
+coefficients = np.linalg.inv(X.T @ X) @ X.T @ severity
+
+
+predicted_severity = X @ coefficients
+
+
+plt.figure(figsize=(10, 6))
+plt.scatter(severity, predicted_severity, alpha=0.6)
+plt.plot([0, 10], [0, 10], 'r--')
+plt.xlabel('Actual Severity Index')
+plt.ylabel('Predicted Severity Index')
+plt.title('Actual vs Predicted Accident Severity')
+plt.grid(True)
+plt.show()
+
+
+residuals = severity - predicted_severity
+plt.figure(figsize=(10, 6))
+plt.scatter(predicted_severity, residuals, alpha=0.6)
+plt.axhline(0, color='red', linestyle='--')
+plt.xlabel('Predicted Severity')
+plt.ylabel('Residuals')
+plt.title('Residual Analysis')
+plt.grid(True)
+plt.show()
+
+
+r_squared = 1 - np.var(residuals) / np.var(severity)
+mae = np.mean(np.abs(residuals))
+
+print(f"Coefficients: Intercept={coefficients[0]:.2f}, Speed={coefficients[1]:.2f}, Road Condition={coefficients[2]:.2f}")
+print(f"R² Score: {r_squared:.2f}")
+print(f"MAE: {mae:.2f}")
+
+
+np.save('severity_model_coefficients.npy', coefficients)
+
+
+def predict_severity(speed, road_condition, coefficients):
+    return coefficients[0] + coefficients[1] * speed + coefficients[2] * road_condition
+
+
+new_speed = 85  # km/h
+new_road_condition = 2  # Wet road
+predicted = predict_severity(new_speed, new_road_condition, coefficients)
+print(f"\nPredicted Severity for {new_speed}km/h on road condition {new_road_condition}: {predicted:.2f}/10")
